@@ -5,6 +5,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.restora.live.ui.*
@@ -12,28 +17,33 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 @Composable fun CustomersScreen(state: AppState, model: RestoraModel) {
-    var query by remember { mutableStateOf("") }
-    var applied by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
+    var applied by rememberSaveable { mutableStateOf("") }
     var edit by remember { mutableStateOf<JSONObject?>(null) }
-    var profile by remember { mutableStateOf<String?>(null) }
+    var profile by rememberSaveable { mutableStateOf<String?>(null) }
     val path = "/customers" + if (applied.isNotBlank()) "?q=${java.net.URLEncoder.encode(applied, "UTF-8")}" else ""
     LaunchedEffect(path) { model.load(path) }
-    PageTitle("Customers") { model.load(path, true) }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(query, { query = it }, modifier = Modifier.weight(1f), label = { Text("Name or mobile") }, singleLine = true)
-        TextButton(onClick = { applied = query }) { Text("Search") }
-    }
-    if (state.can("customers:manage")) Button(onClick = { edit = JSONObject() }) { Text("Add customer") }
-    ReadState(state, path, model) { data ->
-        val customers = (data as JSONArray).objects()
-        if (customers.isEmpty()) Empty("No customers found")
-        customers.forEach { c -> Card(onClick = { profile = c.text("_id"); model.load("/customers/${c.text("_id")}") }, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(c.text("name"), style = MaterialTheme.typography.titleMedium); Text(c.text("phone"))
-                Text("${c.optInt("orderCount")} orders · ${money(c.optDouble("totalSpent", 0.0))} spent")
-                if (c.optDouble("khataBalance", 0.0) != 0.0) Text("Khata ${money(c.optDouble("khataBalance"))}", color = MaterialTheme.colorScheme.error)
+    val raw = state.data[path]
+    val customers = remember(raw) { (raw as? JSONArray)?.objects() }
+    RecordPage("Guests", "Know the people who come back.", customers, path in state.loading, { model.load(path, true) }, "No guests found", header = {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(query, { query = it }, modifier = Modifier.weight(1f), label = { Text("Search name or mobile") }, singleLine = true, shape = MaterialTheme.shapes.small)
+            TextButton(onClick = { applied = query }) { Text("Search") }
+        }
+        if (state.can("customers:manage")) TextButton(onClick = { edit = JSONObject() }) { Text("+ Add guest") }
+    }) { customer ->
+        Surface(onClick = { profile = customer.text("_id"); model.load("/customers/${customer.text("_id")}") }, shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
+            Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small, modifier = Modifier.size(46.dp)) { Box(contentAlignment = Alignment.Center) { Text(customer.text("name").take(1).uppercase(), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary) } }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(customer.text("name"), style = MaterialTheme.typography.titleMedium)
+                    Text(customer.text("phone"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("${customer.optInt("orderCount")} visits · ${money(customer.optDouble("totalSpent", 0.0))} spent", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (customer.optDouble("khataBalance", 0.0) != 0.0) Text("Khata ${money(customer.optDouble("khataBalance"))}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+                }
+                Icon(painterResource(R.drawable.ic_chevron), null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        } }
+        }
     }
     profile?.let { id -> CustomerProfile(id, state, model, { profile = null }, { edit = it }) { saved -> model.upsert(path, saved) } }
     edit?.let { c ->
@@ -45,28 +55,45 @@ import org.json.JSONObject
         }
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable fun CustomerProfile(id: String, state: AppState, model: RestoraModel, dismiss: () -> Unit, edit: (JSONObject) -> Unit, updated: (JSONObject) -> Unit) {
-    var tab by remember { mutableStateOf("Profile") }
-    var payment by remember { mutableStateOf(false) }
+    var tab by rememberSaveable(id) { mutableStateOf("Profile") }
+    var payment by rememberSaveable { mutableStateOf(false) }
     val path = "/customers/$id"
     val customer = state.data[path] as? JSONObject
     val detailPath = if (tab == "Khata") "$path/khata" else "/orders?customerId=$id&allDates=true"
     LaunchedEffect(tab) { if (tab != "Profile") model.load(detailPath) }
-    AlertDialog(onDismissRequest = dismiss, title = { Text(customer?.text("name") ?: "Customer") }, text = {
-        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Choices(tab, listOf("Profile", "Orders", "Khata").map { it to it }, { tab = it })
-            if (tab == "Profile") ReadState(state, path, model) { value ->
-                val c = value as JSONObject
-                Text(c.text("phone")); Text(c.text("area")); Text(c.strings("addresses").joinToString("\n")); Text(c.text("notes")); Text("Khata ${money(c.optDouble("khataBalance", 0.0))}")
-                if (state.can("customers:manage")) TextButton(onClick = { edit(c) }) { Text("Edit profile") }
-            } else ReadState(state, detailPath, model) { value ->
-                val rows = (value as JSONArray).objects()
-                if (rows.isEmpty()) Text("No ${tab.lowercase()} yet")
-                rows.forEach { row -> if (tab == "Khata") Text("${label(row.text("type"))} · ${money(row.optDouble("amount", 0.0))} · ${row.text("note")}") else Text("#${row.text("dailyToken")} · ${label(row.text("status"))} · ${money(row.optDouble("total", 0.0))}") }
+    if (!payment) ModalBottomSheet(onDismissRequest = dismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = MaterialTheme.colorScheme.surface) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(customer?.text("name") ?: "Guest profile", style = MaterialTheme.typography.headlineSmall)
+            Text(customer?.text("phone").orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Profile", "Orders", "Khata").forEach { name -> FilterChip(selected = tab == name, onClick = { tab = name }, label = { Text(name) }) } }
+            if (tab == "Profile") Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                ReadState(state, path, model) { value ->
+                    val guest = value as JSONObject
+                    AmountRow("Khata balance", guest.optDouble("khataBalance", 0.0), emphasized = true)
+                    if (guest.text("area").isNotBlank()) Text(guest.text("area"))
+                    guest.strings("addresses").forEach { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    if (guest.text("notes").isNotBlank()) { SectionLabel("Notes"); Text(guest.text("notes"), style = MaterialTheme.typography.bodyMedium) }
+                    if (state.can("customers:manage")) TextButton(onClick = { dismiss(); edit(guest) }) { Text("Edit guest profile") }
+                }
+            } else {
+                val raw = state.data[detailPath]
+                val rows = remember(raw) { (raw as? JSONArray)?.objects() }
+                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 380.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (rows == null) item { ReadState(state, detailPath, model) {} }
+                    else if (rows.isEmpty()) item { Empty("No ${tab.lowercase()} yet") }
+                    else items(rows, key = { it.text("_id") }) { row ->
+                        if (tab == "Khata") Column {
+                            AmountRow(label(row.text("type")), row.optDouble("amount", 0.0)); Text(row.text("note"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("#${row.text("dailyToken")} · ${label(row.text("status"))}", style = MaterialTheme.typography.bodyMedium); Text(money(row.optDouble("total", 0.0)), style = MaterialTheme.typography.labelLarge) }
+                    }
+                }
             }
-            if (state.can("customers:khata")) Button(onClick = { payment = true }) { Text("Record khata payment") }
+            if (state.can("customers:khata")) PrimaryButton(onClick = { payment = true }, modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp).heightIn(min = 54.dp)) { Text("Record khata payment") }
+            else Spacer(Modifier.height(20.dp))
         }
-    }, confirmButton = { TextButton(onClick = dismiss) { Text("Close") } })
+    }
     if (payment) FormDialog("Khata entry", listOf(Field("type", "Entry type", true, type = "choice", options = listOf("payment" to "Payment received", "adjustment" to "Balance adjustment"), initial = "payment"), Field("amount", "Amount (Rs)", true, "number"), Field("note", "Note")), state, { payment = false }) { body ->
         model.action("$path/khata", body = body) { entry ->
             model.upsert("$path/khata", entry)
@@ -77,30 +104,36 @@ import org.json.JSONObject
 }
 
 @Composable fun MenuScreen(state: AppState, model: RestoraModel) {
-    var tab by remember { mutableStateOf("items") }
+    var tab by rememberSaveable { mutableStateOf("items") }
     var edit by remember { mutableStateOf<JSONObject?>(null) }
     var remove by remember { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(Unit) { model.load("/menu") }
-    PageTitle("Menu") { model.load("/menu", true) }
-    Choices(tab, listOf("items" to "Dishes & deals", "categories" to "Categories", "addonGroups" to "Add-on groups"), { tab = it })
-    if (state.can("menu:update")) Button(onClick = { edit = JSONObject() }) { Text("Add ${when (tab) { "items" -> "dish"; "categories" -> "category"; else -> "add-on group" }}") }
-    ReadState(state, "/menu", model) { data ->
-        val menu = data as JSONObject
-        val rows = menu.array(tab)
-        if (rows.isEmpty()) Empty("Nothing added yet")
-        rows.forEach { row -> Panel {
-            Text(row.text("name"), style = MaterialTheme.typography.titleMedium)
-            if (tab == "items") {
-                row.array("sizes").forEach { Text("${it.text("name").ifBlank { "Regular" }} · ${money(it.optDouble("price", 0.0))}") }
-                if (row.optBoolean("hidden")) Text("Hidden from ordering")
-                if (state.can("menu:stock")) Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("In stock", Modifier.padding(top = 12.dp)); Switch(checked = !row.optBoolean("soldOut"), onCheckedChange = { inStock -> model.action("/menu/items/${row.text("_id")}/stock", "PATCH", obj("soldOut" to !inStock)) { model.updateMenu(tab, row.copyJson().put("soldOut", !inStock)) } }, enabled = !state.busy)
+    val raw = state.data["/menu"]
+    val records = remember(raw, tab) { (raw as? JSONObject)?.array(tab) }
+    var actions by remember { mutableStateOf<JSONObject?>(null) }
+    RecordPage("Your menu", "Good food, easy to find.", records, "/menu" in state.loading, { model.load("/menu", true) }, "Nothing on this menu yet", header = {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("items" to "Dishes", "categories" to "Categories", "addonGroups" to "Add-ons").forEach { (key, title) -> FilterChip(selected = tab == key, onClick = { tab = key }, label = { Text(title) }) }
+        }
+        if (state.can("menu:update")) TextButton(onClick = { edit = JSONObject() }) { Text("+ Add ${when (tab) { "items" -> "dish"; "categories" -> "category"; else -> "add-on group" }}") }
+    }) { record ->
+        Panel {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small, modifier = Modifier.size(48.dp)) { Box(contentAlignment = Alignment.Center) { Icon(painterResource(R.drawable.ic_brand), null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary) } }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(record.text("name"), style = MaterialTheme.typography.titleMedium)
+                    if (tab == "items") Text(record.array("sizes").joinToString(" · ") { (it.text("name").takeIf(String::isNotBlank)?.let { name -> "$name " } ?: "") + money(it.optDouble("price", 0.0)) }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (tab == "addonGroups") Text(record.array("options").joinToString { it.text("name") }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                if (state.can("menu:update")) IconButton(onClick = { actions = record }) { Icon(painterResource(R.drawable.ic_more), "Manage ${record.text("name")}") }
             }
-            if (tab == "addonGroups") Text(row.array("options").joinToString { "${it.text("name")} + ${money(it.optDouble("price", 0.0))}" })
-            if (state.can("menu:update")) Row { TextButton(onClick = { edit = row }) { Text("Edit") }; TextButton(onClick = { remove = row }) { Text("Delete", color = MaterialTheme.colorScheme.error) } }
-        } }
+            if (tab == "items" && state.can("menu:stock")) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (record.optBoolean("hidden")) "Hidden from ordering" else if (record.optBoolean("soldOut")) "Sold out for now" else "Available to order", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Switch(checked = !record.optBoolean("soldOut"), onCheckedChange = { available -> model.action("/menu/items/${record.text("_id")}/stock", "PATCH", obj("soldOut" to !available)) { model.updateMenu(tab, it) } }, enabled = !state.busy)
+            }
+        }
     }
+    actions?.let { record -> AlertDialog(onDismissRequest = { actions = null }, title = { Text(record.text("name")) }, confirmButton = { TextButton(onClick = { edit = record; actions = null }) { Text("Edit") } }, dismissButton = { TextButton(onClick = { remove = record; actions = null }) { Text("Delete", color = MaterialTheme.colorScheme.error) } }) }
     val menu = state.data["/menu"] as? JSONObject ?: JSONObject()
     val endpoint = if (tab == "addonGroups") "addon-groups" else tab
     edit?.let { row ->
@@ -110,12 +143,12 @@ import org.json.JSONObject
                 "items" -> {
                     add(Field("categoryId", "Category", true, type = "choice", options = menu.array("categories").map { it.text("_id") to it.text("name") }, initial = row.text("categoryId")))
                     add(Field("description", "Description", type = "multiline", initial = row.text("description")))
-                    add(Field("prices", "Sizes: name = price (one per line)", true, "multiline", initial = row.array("sizes").joinToString("\n") { "${it.text("name")} = ${it.text("price")}" }))
+                    add(Field("prices", "Prices", true, "prices", initial = row.array("sizes").joinToString("\n") { "${it.text("name")} = ${it.text("price")}" }))
                 }
                 "categories" -> add(Field("sortOrder", "Sort order", type = "number", initial = row.text("sortOrder").ifBlank { "0" }))
                 else -> {
                     add(Field("min", "Minimum choices", true, "number", initial = row.text("min").ifBlank { "0" })); add(Field("max", "Maximum choices", true, "number", initial = row.text("max").ifBlank { "1" }))
-                    add(Field("prices", "Options: name = price (one per line)", true, "multiline", initial = row.array("options").joinToString("\n") { "${it.text("name")} = ${it.text("price")}" }))
+                    add(Field("prices", "Options", true, "prices", initial = row.array("options").joinToString("\n") { "${it.text("name")} = ${it.text("price")}" }))
                 }
             }
         }

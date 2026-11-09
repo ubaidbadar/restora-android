@@ -28,7 +28,7 @@ val permissionCatalog = listOf("orders:view", "orders:create", "orders:update", 
                 Text(label(permission.replace(':', ' ')), Modifier.padding(top = 12.dp))
             } }
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(onClick = { model.action("/roles" + if (row.has("_id")) "/${row.text("_id")}" else "", if (row.has("_id")) "PATCH" else "POST", obj("name" to name, "description" to description, "permissions" to JSONArray(permissions.toList()))) { model.upsert("/roles", it); dismiss() } }, enabled = !state.busy && name.isNotBlank()) { Text(if (state.busy) "Saving…" else "Save role") }
+            PrimaryButton(onClick = { model.action("/roles" + if (row.has("_id")) "/${row.text("_id")}" else "", if (row.has("_id")) "PATCH" else "POST", obj("name" to name, "description" to description, "permissions" to JSONArray(permissions.toList()))) { model.upsert("/roles", it); dismiss() } }, enabled = !state.busy && name.isNotBlank()) { Text(if (state.busy) "Saving…" else "Save role") }
             TextButton(onClick = dismiss, enabled = !state.busy) { Text("Cancel") }
         } }
     }
@@ -43,7 +43,7 @@ val permissionCatalog = listOf("orders:view", "orders:create", "orders:update", 
             AccessChecks(roles, { roles = it }, all, { all = it }, branches, { branches = it }, state)
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
-    }, confirmButton = { Button(onClick = { model.action("/members/${row.text("_id")}", "PATCH", obj("roleIds" to JSONArray(roles.toList()), "branchScope" to if (all) "all" else "list", "branchIds" to JSONArray(branches.toList()))) { model.upsert("/members", it); dismiss() } }, enabled = !state.busy && roles.isNotEmpty() && (all || branches.isNotEmpty())) { Text("Save") } }, dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })
+    }, confirmButton = { PrimaryButton(onClick = { model.action("/members/${row.text("_id")}", "PATCH", obj("roleIds" to JSONArray(roles.toList()), "branchScope" to if (all) "all" else "list", "branchIds" to JSONArray(branches.toList()))) { model.upsert("/members", it); dismiss() } }, enabled = !state.busy && roles.isNotEmpty() && (all || branches.isNotEmpty())) { Text("Save") } }, dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })
 }
 @Composable fun AccessChecks(roles: Set<String>, setRoles: (Set<String>) -> Unit, all: Boolean, setAll: (Boolean) -> Unit, branches: Set<String>, setBranches: (Set<String>) -> Unit, state: AppState) {
     Text("Roles", style = MaterialTheme.typography.titleMedium)
@@ -69,7 +69,7 @@ val permissionCatalog = listOf("orders:view", "orders:create", "orders:update", 
             AccessChecks(roles, { roles = it }, all, { all = it }, branches, { branches = it }, state)
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
-    }, confirmButton = { Button(onClick = {
+    }, confirmButton = { PrimaryButton(onClick = {
         model.action("/invitations", body = obj("channel" to "email", "email" to email, "name" to name, "roleIds" to JSONArray(roles.toList()), "branchScope" to if (all) "all" else "list", "branchIds" to JSONArray(branches.toList()))) { model.upsert("/invitations", it); dismiss() }
     }, enabled = !state.busy && email.contains('@') && roles.isNotEmpty() && (all || branches.isNotEmpty())) { Text(if (state.busy) "Sending…" else "Send invitation") } }, dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })
 }
@@ -90,5 +90,5 @@ val permissionCatalog = listOf("orders:view", "orders:create", "orders:update", 
             }
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
-    }, confirmButton = { Button(onClick = { model.action("/teams" + if (row.has("_id")) "/${row.text("_id")}" else "", if (row.has("_id")) "PATCH" else "POST", obj("name" to name, "description" to description, "branchId" to branch, "membershipIds" to JSONArray(members.toList()))) { model.upsert("/teams", it); dismiss() } }, enabled = !state.busy && name.isNotBlank()) { Text("Save team") } }, dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })
+    }, confirmButton = { PrimaryButton(onClick = { model.action("/teams" + if (row.has("_id")) "/${row.text("_id")}" else "", if (row.has("_id")) "PATCH" else "POST", obj("name" to name, "description" to description, "branchId" to branch, "membershipIds" to JSONArray(members.toList()))) { model.upsert("/teams", it); dismiss() } }, enabled = !state.busy && name.isNotBlank()) { Text("Save team") } }, dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })
 }

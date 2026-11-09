@@ -1,6 +1,11 @@
 package app.restora.live
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 import okhttp3.Cookie
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.mockwebserver.MockResponse
@@ -86,4 +91,17 @@ class RestoraContractTest {
         deal.put("from", "").put("to", "")
         assertTrue(onSale(deal, monday.withHour(12)))
     }
+    @Test fun cancellingSlowResponseCancelsItsTransport() = runBlocking {
+        val server = MockWebServer(); server.start()
+        try {
+            server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE))
+            val api = RestoraApi(MemoryStore(), server.url("/").toString())
+            val job = launch { api.call("/slow") }
+            withContext(Dispatchers.IO) { checkNotNull(server.takeRequest(5, TimeUnit.SECONDS)) }
+            val call = api.client.dispatcher.runningCalls().single()
+            job.cancelAndJoin()
+            assertTrue(call.isCanceled())
+        } finally { server.shutdown() }
+    }
+
 }
