@@ -15,6 +15,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["appLabel"] = "@string/app_name"
         buildConfigField("String", "API_URL", "\"${providers.gradleProperty("restora.apiUrl").getOrElse("https://restora.live")}\"")
 
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${providers.gradleProperty("restora.googleWebClientId").getOrElse("")}\"")
@@ -23,9 +24,17 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Optional side-by-side install for design review; release identity stays unchanged.
+            if (providers.gradleProperty("restora.designPreview").orNull == "true") {
+                applicationIdSuffix = ".design"
+                versionNameSuffix = "-design"
+                manifestPlaceholders["appLabel"] = "Restora Design"
+            }
+        }
         release {
             optimization {
-                enable = false
+                enable = true
             }
         }
     }
@@ -41,14 +50,14 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
-    implementation("androidx.credentials:credentials:1.5.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    coreLibraryDesugaring(libs.desugar.jdk)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play)
+    implementation(libs.google.identity)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.sse)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -58,8 +67,9 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     testImplementation(libs.junit)
-    testImplementation("org.json:json:20240303")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.json)
+    testImplementation(libs.mockwebserver)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
