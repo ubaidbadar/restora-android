@@ -23,11 +23,13 @@ import org.json.JSONArray
     var code by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var validation by rememberSaveable { mutableStateOf<String?>(null) }
+    // Each auth step starts at its heading, even when entered from a scrolled footer.
+    val scroll = key(mode) { rememberScrollState() }
     val title = when (mode) { "Sign in" -> "Welcome back."; "Create account" -> "A fresh start for\nyour restaurant."; "Verify email" -> "Check your inbox."; "Choose password" -> "Choose a new password."; else -> "Forgot your password?" }
     val subtitle = when (mode) { "Sign in" -> "Sign in to keep your service running smoothly."; "Create account" -> "Create your account. Bring your team together."; "Verify email" -> "Enter the code we sent to your email."; "Choose password" -> "Enter your email code and a new password."; else -> "We'll send you a code to get back in." }
     BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).systemBarsPadding().imePadding()) {
         Column(
-            Modifier.widthIn(max = 460.dp).fillMaxWidth().align(Alignment.TopCenter).heightIn(min = maxHeight).verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 28.dp),
+            Modifier.widthIn(max = 460.dp).fillMaxWidth().align(Alignment.TopCenter).heightIn(min = maxHeight).verticalScroll(scroll).padding(horizontal = 28.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

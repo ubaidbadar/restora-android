@@ -50,7 +50,7 @@ class DesignFlowTest {
         compose.onNodeWithText("Email address *").assertIsDisplayed()
         compose.onNodeWithText("Password *").assertIsDisplayed()
         compose.onNodeWithText("Save changes").assertDoesNotExist()
-        compose.onNodeWithText("Create account").performClick()
+        compose.onNodeWithText("Create account").performScrollTo().performClick()
         compose.onNodeWithText("Full name *").assertIsDisplayed()
     }
 
