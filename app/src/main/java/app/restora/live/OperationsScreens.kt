@@ -1,6 +1,7 @@
 package app.restora.live
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -35,40 +36,66 @@ val paymentOptions = listOf("cash", "card", "jazzcash", "easypaisa", "bank").map
     val answer = state.data[path] as? JSONObject
     val stats = answer?.optJSONObject("stats")
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp, 12.dp, 20.dp, 104.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        item { PageHeading("Your day, at a glance", "A little clarity before the next rush.") { model.load(path, true) } }
+        item { PageHeading("Overview", "Your restaurant, at a glance.") { model.load(path, true) } }
         item { DateFilter(date) { date = it } }
         if (stats == null) item { ReadState(state, path, model) {} }
         else {
+            item { SalesSummary(stats) }
             item {
-                Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primary) {
-                    Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text("TOTAL SALES", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
-                        Text(money(stats.optDouble("sales", 0.0)), style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.onPrimary)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f))
-                        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                            Column { Text("${stats.optInt("orderCount")}", style = MaterialTheme.typography.titleLarge); Text("orders served", style = MaterialTheme.typography.bodySmall) }
-                            Column { Text("${stats.optInt("newCustomers")}", style = MaterialTheme.typography.titleLarge); Text("new guests", style = MaterialTheme.typography.bodySmall) }
+                SectionLabel("Collections")
+                Spacer(Modifier.height(10.dp))
+                Panel {
+                    AmountRow("Cash received", stats.optDouble("cash", 0.0))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    AmountRow("Digital received", stats.optDouble("digital", 0.0))
+                }
+            }
+            item {
+                Panel {
+                    SectionLabel("Outstanding")
+                    AmountRow("Unpaid orders", stats.optDouble("notCollected", 0.0))
+                    AmountRow("Guest khata", stats.optDouble("khataTotal", 0.0))
+                    if (state.can("orders:view") || state.can("customers:view")) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (state.can("orders:view")) TextButton(onClick = { model.navigate("Orders") }) { Text("View orders"); Icon(painterResource(R.drawable.ic_chevron), null, Modifier.size(16.dp)) }
+                            if (state.can("customers:view")) TextButton(onClick = { model.navigate("Customers") }) { Text("View guests"); Icon(painterResource(R.drawable.ic_chevron), null, Modifier.size(16.dp)) }
                         }
                     }
                 }
             }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(Modifier.weight(1f)) { Panel { Text("Cash received", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(money(stats.optDouble("cash", 0.0)), style = MaterialTheme.typography.titleLarge) } }
-                    Column(Modifier.weight(1f)) { Panel { Text("Digital received", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant); Text(money(stats.optDouble("digital", 0.0)), style = MaterialTheme.typography.titleLarge) } }
+            item { SectionLabel("Sales by service", "${stats.optInt("orderCount")} orders") }
+            items(stats.array("byType"), key = { "type:${it.text("type")}" }) { type ->
+                Panel {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small) {
+                            Icon(painterResource(if (type.text("type") == "dine_in") R.drawable.ic_table else R.drawable.ic_receipt), null, Modifier.padding(12.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                        }
+                        Column(Modifier.weight(1f)) { Text(label(type.text("type")), style = MaterialTheme.typography.titleSmall); Text("${type.optInt("count")} orders", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        Text(money(type.optDouble("sales", 0.0)), style = MaterialTheme.typography.titleSmall)
+                    }
                 }
             }
-            item { Panel { SectionLabel("Still to collect"); AmountRow("Unpaid orders", stats.optDouble("notCollected", 0.0)); AmountRow("Customer khata", stats.optDouble("khataTotal", 0.0)) } }
-            item { SectionLabel("How guests ordered", "${stats.optInt("orderCount")} orders") }
-            items(stats.array("byType"), key = { "type:${it.text("type")}" }) { type ->
-                Panel { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) { Text(label(type.text("type")), style = MaterialTheme.typography.titleSmall); Text("${type.optInt("count")} orders", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Text(money(type.optDouble("sales", 0.0)), style = MaterialTheme.typography.titleSmall)
-                } }
-            }
             if (answer.array("slipping").isNotEmpty()) {
-                item { SectionLabel("Time to reconnect", "Guests you haven't seen lately") }
+                item { SectionLabel("Guests to reconnect with") }
                 items(answer.array("slipping"), key = { "guest:${it.text("_id")}" }) { guest -> Panel { Text(guest.text("name"), style = MaterialTheme.typography.titleSmall); Text(guest.text("phone"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+            }
+        }
+    }
+}
+
+/** A single sales hierarchy; no invented trends, live counts, or comparative claims. */
+@Composable fun SalesSummary(stats: JSONObject) {
+    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.size(7.dp).background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape))
+                Text("Total sales", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(money(stats.optDouble("sales", 0.0)), style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.onSurface)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text("${stats.optInt("orderCount")}", style = MaterialTheme.typography.titleLarge); Text("Orders", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) { Text("${stats.optInt("newCustomers")}", style = MaterialTheme.typography.titleLarge); Text("New guests", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
     }
@@ -81,6 +108,7 @@ val paymentOptions = listOf("cash", "card", "jazzcash", "easypaisa", "bank").map
     val picker = rememberDatePickerState(initialSelectedDateMillis = date.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli())
     Surface(onClick = { open = true }, color = MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.small) {
         Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(painterResource(R.drawable.ic_calendar), null, Modifier.padding(end = 12.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
             Text(if (value == today()) "Today" else date.format(java.time.format.DateTimeFormatter.ofPattern("EEE, d MMM")), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
             Text(date.format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Icon(painterResource(R.drawable.ic_chevron), null, Modifier.padding(start = 10.dp).size(18.dp))
@@ -100,7 +128,7 @@ val paymentOptions = listOf("cash", "card", "jazzcash", "easypaisa", "bank").map
     val raw = state.data[path]
     val allOrders = remember(raw) { (raw as? JSONArray)?.objects() }
     val records = remember(allOrders, filter) { allOrders?.filter { filter == "all" || it.text("status") == filter } }
-    RecordPage(if (history) "Order history" else "Orders", "Keep every ticket moving.", records, path in state.loading, { model.load(path, true) }, "No orders here yet", header = {
+    RecordPage(if (history) "Order history" else "Orders", "Track tickets from kitchen to collection.", records, path in state.loading, { model.load(path, true) }, "No orders here yet", header = {
         DateFilter(date) { date = it }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(listOf("all", "pending", "new", "preparing", "ready", "out_for_delivery", "completed", "cancelled")) { status ->
@@ -117,22 +145,26 @@ val paymentOptions = listOf("cash", "card", "jazzcash", "easypaisa", "bank").map
 }
 
 @Composable fun OrderCard(order: JSONObject, onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
+    Surface(onClick = onClick, shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small) { Text("#${order.text("dailyToken")}", Modifier.padding(12.dp), style = MaterialTheme.typography.titleMedium) }
-                Column(Modifier.weight(1f)) {
-                    Text(order.optJSONObject("customer")?.text("name")?.ifBlank { null } ?: "Walk-in guest", style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(listOf(label(order.text("type")), order.text("tableName")).filter(String::isNotBlank).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Icon(painterResource(R.drawable.ic_chevron), null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                Text("#${order.text("dailyToken")}", style = MaterialTheme.typography.titleLarge)
+                Text(listOf(label(order.text("type")), order.text("tableName")).filter(String::isNotBlank).joinToString(" · "), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(painterResource(R.drawable.ic_chevron), null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
-            Text(order.array("items").joinToString { "${it.optInt("qty")} × ${it.text("name")}" }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(order.optJSONObject("customer")?.text("name")?.ifBlank { null } ?: "Walk-in guest", style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(order.array("items").joinToString { "${it.optInt("qty")} × ${it.text("name")}" }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatusPill(order.text("status")); Text(label(order.text("paymentStatus")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // FlowRow lets long payment labels and large fonts wrap instead of squeezing the amount.
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatusPill(order.text("status"))
+                    Text(label(order.text("paymentStatus")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text(money(order.optDouble("total", 0.0)), style = MaterialTheme.typography.titleMedium)
             }
-            AmountRow("Order total", order.optDouble("total", 0.0), emphasized = true)
         }
     }
 }
@@ -205,10 +237,10 @@ val paymentOptions = listOf("cash", "card", "jazzcash", "easypaisa", "bank").map
     val raw = state.data[path]
     val tables = remember(raw) { (raw as? JSONArray)?.objects() }
     LazyVerticalGrid(GridCells.Adaptive(140.dp), Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp, 12.dp, 20.dp, 104.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item(span = { GridItemSpan(maxLineSpan) }) { PageHeading("Your floor", "A place for every guest.") { model.load(path, true) } }
+        item(span = { GridItemSpan(maxLineSpan) }) { PageHeading("Tables", "Availability and guest requests.") { model.load(path, true) } }
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("${tables?.count { !it.optBoolean("archived") && it.array("orders").isEmpty() } ?: 0} tables available", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if (tables == null) "Checking availability…" else "${tables.count { !it.optBoolean("archived") && it.array("orders").isEmpty() }} tables available", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (state.can("tables:manage")) TextButton(onClick = { edit = JSONObject() }) { Text("+ Add table") }
             }
         }
@@ -216,9 +248,9 @@ val paymentOptions = listOf("cash", "card", "jazzcash", "easypaisa", "bank").map
         else if (tables.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) { Empty("Your first table starts here", "Add tables to organise dine-in orders and guest requests.") }
         else items(tables, key = { it.text("_id") }, contentType = { "table" }) { table ->
             val status = when { table.optBoolean("archived") -> "archived"; table.array("orders").isEmpty() -> "available"; else -> "occupied" }
-            Surface(onClick = { selectedId = table.text("_id") }, shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Icon(painterResource(R.drawable.ic_table), null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
+            Surface(onClick = { selectedId = table.text("_id") }, shape = MaterialTheme.shapes.medium, color = if (status == "occupied") MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(painterResource(R.drawable.ic_table), null, Modifier.size(32.dp), tint = when (status) { "available" -> MaterialTheme.colorScheme.tertiary; "occupied" -> MaterialTheme.colorScheme.secondary; else -> MaterialTheme.colorScheme.onSurfaceVariant })
                     Text(table.text("name"), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(listOf(table.text("section"), table.text("seats").takeIf(String::isNotBlank)?.let { "$it seats" }).filterNotNull().filter(String::isNotBlank).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     StatusPill(status)

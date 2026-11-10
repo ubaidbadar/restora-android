@@ -10,10 +10,11 @@ import androidx.compose.ui.unit.dp
 
 private val RestoraColors = lightColorScheme(
     primary = Color(0xFF4F46E5), onPrimary = Color.White,
-    primaryContainer = Color(0xFFEEEDFF), onPrimaryContainer = Color(0xFF4038B0),
-    secondary = Color(0xFF536077), secondaryContainer = Color(0xFFEDF0F5),
-    background = Color(0xFFF7F8FB), onBackground = Color(0xFF182135),
-    surface = Color.White, onSurface = Color(0xFF182135),
+    primaryContainer = Color(0xFFEEF2FF), onPrimaryContainer = Color(0xFF4338CA),
+    secondary = Color(0xFF8F5A00), onSecondary = Color.White,
+    secondaryContainer = Color(0xFFFDF5E4), onSecondaryContainer = Color(0xFF7A4B00),
+    background = Color(0xFFF6F7F9), onBackground = Color(0xFF0F172A),
+    surface = Color.White, onSurface = Color(0xFF0F172A),
     onSurfaceVariant = Color(0xFF5B6474), surfaceVariant = Color(0xFFF0F2F7),
     surfaceContainer = Color(0xFFF0F2F7), surfaceContainerLow = Color(0xFFF7F8FB),
     surfaceContainerHigh = Color(0xFFE9EDF4),
@@ -26,7 +27,7 @@ private val RestoraColors = lightColorScheme(
     MaterialTheme(
         colorScheme = RestoraColors,
         typography = Typography,
-        shapes = Shapes(extraSmall = RoundedCornerShape(8.dp), small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(18.dp), large = RoundedCornerShape(24.dp), extraLarge = RoundedCornerShape(30.dp)),
+        shapes = Shapes(extraSmall = RoundedCornerShape(8.dp), small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(16.dp), large = RoundedCornerShape(20.dp), extraLarge = RoundedCornerShape(28.dp)),
         content = content,
     )
 }

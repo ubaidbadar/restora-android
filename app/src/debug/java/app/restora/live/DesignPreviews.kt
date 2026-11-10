@@ -37,3 +37,15 @@ private class PreviewSource : RestoraDataSource {
         }
     }
 }
+
+@Preview(name = "Sales overview · phone", widthDp = 360, heightDp = 440, showBackground = true)
+@Composable private fun SalesPreview() {
+    RestoraTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                app.restora.live.ui.PageHeading("Overview", "Your restaurant, at a glance.") {}
+                SalesSummary(obj("sales" to 28450, "orderCount" to 18, "newCustomers" to 4))
+            }
+        }
+    }
+}

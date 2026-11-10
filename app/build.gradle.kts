@@ -15,6 +15,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["appLabel"] = "@string/app_name"
         buildConfigField("String", "API_URL", "\"${providers.gradleProperty("restora.apiUrl").getOrElse("https://restora.live")}\"")
 
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${providers.gradleProperty("restora.googleWebClientId").getOrElse("")}\"")
@@ -23,6 +24,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Optional side-by-side install for design review; release identity stays unchanged.
+            if (providers.gradleProperty("restora.designPreview").orNull == "true") {
+                applicationIdSuffix = ".design"
+                versionNameSuffix = "-design"
+                manifestPlaceholders["appLabel"] = "Restora Design"
+            }
+        }
         release {
             optimization {
                 enable = true

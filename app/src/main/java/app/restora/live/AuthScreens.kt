@@ -1,6 +1,7 @@
 package app.restora.live
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.res.painterResource
@@ -24,7 +25,7 @@ import org.json.JSONArray
     var validation by rememberSaveable { mutableStateOf<String?>(null) }
     val title = when (mode) { "Sign in" -> "Welcome back."; "Create account" -> "A fresh start for\nyour restaurant."; "Verify email" -> "Check your inbox."; "Choose password" -> "Choose a new password."; else -> "Forgot your password?" }
     val subtitle = when (mode) { "Sign in" -> "Sign in to keep your service running smoothly."; "Create account" -> "Create your account. Bring your team together."; "Verify email" -> "Enter the code we sent to your email."; "Choose password" -> "Enter your email code and a new password."; else -> "We'll send you a code to get back in." }
-    BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).systemBarsPadding().imePadding()) {
         Column(
             Modifier.widthIn(max = 460.dp).fillMaxWidth().align(Alignment.TopCenter).heightIn(min = maxHeight).verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -32,8 +33,9 @@ import org.json.JSONArray
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 BrandMark(); Text("Restora", style = MaterialTheme.typography.titleLarge)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("RESTAURANT WORKSPACE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 Text(title, style = MaterialTheme.typography.headlineLarge)
                 Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
             }
@@ -65,13 +67,20 @@ import org.json.JSONArray
                 }, enabled = !state.busy, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
                     Text(if (state.busy) "Please wait…" else when (mode) { "Reset password" -> "Send reset code"; "Verify email" -> "Verify email"; "Choose password" -> "Update password"; else -> mode })
                 }
-                if (mode in listOf("Sign in", "Create account")) GoogleSignIn(state, model)
+                if (mode in listOf("Sign in", "Create account") && BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank()) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                        Text("or", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        HorizontalDivider(Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                    GoogleSignIn(state, model)
+                }
             }
-            Row(Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(Modifier.align(Alignment.CenterHorizontally), verticalArrangement = Arrangement.Center, horizontalArrangement = Arrangement.Center) {
                 Text(if (mode == "Sign in") "New to Restora?" else "Already have an account?", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 TextButton(onClick = { mode = if (mode == "Sign in") "Create account" else "Sign in"; password = ""; code = ""; validation = null; model.clearMessage() }) { Text(if (mode == "Sign in") "Create account" else "Sign in") }
             }
-            Text("A calmer day. A better service.", modifier = Modifier.align(Alignment.CenterHorizontally), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Orders. Guests. Your whole team.", modifier = Modifier.align(Alignment.CenterHorizontally), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

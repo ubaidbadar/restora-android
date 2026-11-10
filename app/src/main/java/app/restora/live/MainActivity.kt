@@ -8,6 +8,7 @@ import androidx.activity.compose.BackHandler
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -66,28 +67,42 @@ class MainActivity : ComponentActivity() {
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    if (screen !in pages.map { it.first } && screen != "New order") IconButton(onClick = { model.navigate("More") }) { Icon(painterResource(R.drawable.ic_back), "Back to more") }
+                },
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
-                        BrandMark(36)
-                        Column {
-                            Text(state.workplace?.optJSONObject("restaurant")?.text("name").orEmpty(), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(state.workplace?.optJSONObject("branch")?.text("name").orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Surface(onClick = { model.navigate("Workspace") }, shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surface) {
+                        Row(Modifier.heightIn(min = 48.dp).padding(end = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            BrandMark(34)
+                            Column(Modifier.weight(1f, fill = false)) {
+                                Text(state.workplace?.optJSONObject("restaurant")?.text("name").orEmpty(), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(state.workplace?.optJSONObject("branch")?.text("name").orEmpty(), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Icon(painterResource(R.drawable.ic_switch), "Switch restaurant or branch", Modifier.size(17.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                 actions = {
-                    IconButton(onClick = { model.navigate("Workspace") }) { Icon(painterResource(R.drawable.ic_switch), "Switch restaurant or branch") }
-                    IconButton(onClick = { model.navigate("Account") }) { Icon(painterResource(R.drawable.ic_people), "Your account") }
+                    Surface(onClick = { model.navigate("Account") }, shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(end = 12.dp).size(48.dp)) {
+                        Box(contentAlignment = Alignment.Center) { Icon(painterResource(R.drawable.ic_people), "Your account", Modifier.size(21.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }
                 },
             )
         },
-        bottomBar = { if (screen != "New order") NavigationBar(containerColor = MaterialTheme.colorScheme.surface) { pages.forEach { (name, icon) ->
-            NavigationBarItem(selected = screen == name, onClick = { model.navigate(name) }, icon = { Icon(painterResource(icon), name) }, label = { Text(if (name == "Customers") "Guests" else name) })
-        } } },
+        bottomBar = { if (screen != "New order") Surface(color = MaterialTheme.colorScheme.surface) {
+            Column {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) { pages.forEach { (name, icon) ->
+                    val selected = screen == name || (name == "More" && screen !in pages.map { it.first })
+                    NavigationBarItem(selected = selected, onClick = { model.navigate(name) }, icon = { Icon(painterResource(icon), null, Modifier.size(22.dp)) }, label = { Text(if (name == "Customers") "Guests" else name, maxLines = 1) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary, indicatorColor = MaterialTheme.colorScheme.primaryContainer, unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant))
+                } }
+            }
+        } },
         floatingActionButton = { if (screen in listOf("Orders", "Tables", "Home") && state.can("orders:create")) ExtendedFloatingActionButton(onClick = { model.navigate("New order") }, icon = { Icon(painterResource(R.drawable.ic_add), null) }, text = { Text("New order") }, containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
+        Column(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
             state.notice?.let { Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) { Text(it, Modifier.weight(1f)); TextButton(onClick = model::clearMessage) { Text("Dismiss") } } }
             if (state.offline) Text("Offline · Your saved data is available.", Modifier.fillMaxWidth().padding(12.dp), color = MaterialTheme.colorScheme.error)
             if (state.error != null) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -116,6 +131,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
         }
     }
 }

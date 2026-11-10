@@ -41,11 +41,11 @@ import org.json.JSONObject
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(20.dp, 12.dp, 20.dp, 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) { Text(if (existing == null) "New order" else "Edit #${existing.text("dailyToken")}", style = MaterialTheme.typography.headlineSmall); Text("Something delicious starts here.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Column(Modifier.weight(1f)) { Text(if (existing == null) "New order" else "Edit #${existing.text("dailyToken")}", style = MaterialTheme.typography.headlineSmall); Text("Choose dishes, then review your order.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     TextButton(onClick = { if (cart.isEmpty()) model.navigate("Orders") else leave = true }) { Text("Close") }
                 }
             }
-            item { OutlinedTextField(search, { search = it }, label = { Text("Find a dish") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = MaterialTheme.shapes.small) }
+            item { OutlinedTextField(search, { search = it }, placeholder = { Text("Search dishes") }, leadingIcon = { Icon(painterResource(R.drawable.ic_search), null, Modifier.size(20.dp)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = MaterialTheme.shapes.small) }
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     item { FilterChip(selected = category.isBlank(), onClick = { category = "" }, label = { Text("All dishes") }) }

@@ -13,11 +13,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 @Composable fun MoreScreen(state: AppState, model: RestoraModel) {
-    Text("Everything in its place", style = MaterialTheme.typography.headlineSmall)
-    Text("Tools for a smoother day.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text("More", style = MaterialTheme.typography.headlineSmall)
+    Text("Manage your restaurant.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     data class Link(val title: String, val detail: String, val icon: Int, val permission: String)
     val sections = listOf(
-        "Service" to listOf(Link("Menu", "Dishes, prices and availability", R.drawable.ic_menu, "menu:view"), Link("Reservations", "Plan the next great evening", R.drawable.ic_calendar, "reservations:view"), Link("WhatsApp", "Conversations with your guests", R.drawable.ic_chat, "orders:view"), Link("History", "Find past orders and receipts", R.drawable.ic_receipt, "orders:view")),
+        "Service" to listOf(Link("Menu", "Dishes, prices and availability", R.drawable.ic_menu, "menu:view"), Link("Reservations", "Bookings, times and tables", R.drawable.ic_calendar, "reservations:view"), Link("WhatsApp", "Conversations with your guests", R.drawable.ic_chat, "orders:view"), Link("History", "Find past orders and receipts", R.drawable.ic_receipt, "orders:view")),
         "Your restaurant" to listOf(Link("Staff", "People, invitations and access", R.drawable.ic_people, "staff:view"), Link("Branches", "Your locations", R.drawable.ic_home, "branches:manage"), Link("Roles", "Permissions for your team", R.drawable.ic_people, "roles:manage"), Link("Teams", "Keep people working together", R.drawable.ic_people, "teams:manage"), Link("Settings", "Restaurant, tax and receipts", R.drawable.ic_settings, "settings:manage")),
         "Connected tools" to listOf(Link("Devices", "Registered terminals", R.drawable.ic_table, "devices:manage"), Link("Printers", "Counter and kitchen printing", R.drawable.ic_receipt, "devices:manage"), Link("Activity", "What changed, and who changed it", R.drawable.ic_receipt, "audit:view")),
     )

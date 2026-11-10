@@ -33,10 +33,10 @@ import org.json.JSONObject
 @Composable fun PageHeading(title: String, subtitle: String, refresh: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.headlineSmall)
+            Text(title, style = MaterialTheme.typography.headlineMedium)
             if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        TextButton(onClick = refresh) { Text("Refresh") }
+        IconButton(onClick = refresh) { Icon(painterResource(R.drawable.ic_refresh), "Refresh $title", Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
 
@@ -71,12 +71,16 @@ import org.json.JSONObject
 
 @Composable fun StatusPill(value: String) {
     val colors = MaterialTheme.colorScheme
-    val positive = value in listOf("paid", "completed", "available", "confirmed", "active", "seated")
+    val positive = value in listOf("paid", "completed", "available", "confirmed", "active", "seated", "ready")
     val negative = value in listOf("cancelled", "suspended", "no_show", "sold_out")
-    val container = when { positive -> colors.tertiaryContainer; negative -> colors.errorContainer; else -> colors.primaryContainer }
-    val ink = when { positive -> colors.onTertiaryContainer; negative -> colors.onErrorContainer; else -> colors.onPrimaryContainer }
+    val waiting = value in listOf("pending", "new", "preparing", "unpaid", "occupied")
+    val container = when { positive -> colors.tertiaryContainer; negative -> colors.errorContainer; waiting -> colors.secondaryContainer; else -> colors.surfaceVariant }
+    val ink = when { positive -> colors.onTertiaryContainer; negative -> colors.onErrorContainer; waiting -> colors.onSecondaryContainer; else -> colors.onSurfaceVariant }
     Surface(color = container, shape = MaterialTheme.shapes.extraSmall) {
-        Text(label(value), Modifier.padding(horizontal = 10.dp, vertical = 5.dp), color = ink, style = MaterialTheme.typography.labelSmall)
+        Row(Modifier.padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.size(5.dp).background(ink, androidx.compose.foundation.shape.CircleShape))
+            Text(label(value), color = ink, style = MaterialTheme.typography.labelSmall)
+        }
     }
 }
 

@@ -35,7 +35,7 @@ fun label(value: String): String = value.replace('_', ' ').replaceFirstChar { it
 fun today(): String = LocalDate.now(ZoneId.of("Asia/Karachi")).toString()
 
 @Composable fun Panel(content: @Composable ColumnScope.() -> Unit) {
-    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
+    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
 }
@@ -105,7 +105,7 @@ fun formStateSaver(fields: List<Field>) = mapSaver<Map<String, String>>(
         value = value, onValueChange = change,
         label = { Text(field.title + if (field.required) " *" else "") }, modifier = Modifier.fillMaxWidth(), enabled = enabled,
         shape = MaterialTheme.shapes.small,
-        colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant, unfocusedContainerColor = MaterialTheme.colorScheme.surface),
+        colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outline, unfocusedContainerColor = MaterialTheme.colorScheme.surface),
         singleLine = field.type !in listOf("multiline", "list"),
         keyboardOptions = KeyboardOptions(keyboardType = when (field.type) { "number" -> KeyboardType.Decimal; "phone" -> KeyboardType.Phone; "email" -> KeyboardType.Email; "password" -> KeyboardType.Password; else -> KeyboardType.Text }),
         visualTransformation = if (field.type == "password" && !visible) PasswordVisualTransformation() else VisualTransformation.None,

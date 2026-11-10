@@ -25,7 +25,7 @@ import org.json.JSONObject
     LaunchedEffect(path) { model.load(path) }
     val raw = state.data[path]
     val customers = remember(raw) { (raw as? JSONArray)?.objects() }
-    RecordPage("Guests", "Know the people who come back.", customers, path in state.loading, { model.load(path, true) }, "No guests found", header = {
+    RecordPage("Guests", "Profiles, visits and khata.", customers, path in state.loading, { model.load(path, true) }, "No guests found", header = {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(query, { query = it }, modifier = Modifier.weight(1f), label = { Text("Search name or mobile") }, singleLine = true, shape = MaterialTheme.shapes.small)
             TextButton(onClick = { applied = query }) { Text("Search") }
@@ -111,7 +111,7 @@ import org.json.JSONObject
     val raw = state.data["/menu"]
     val records = remember(raw, tab) { (raw as? JSONObject)?.array(tab) }
     var actions by remember { mutableStateOf<JSONObject?>(null) }
-    RecordPage("Your menu", "Good food, easy to find.", records, "/menu" in state.loading, { model.load("/menu", true) }, "Nothing on this menu yet", header = {
+    RecordPage("Your menu", "Dishes, prices and availability.", records, "/menu" in state.loading, { model.load("/menu", true) }, "Nothing on this menu yet", header = {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("items" to "Dishes", "categories" to "Categories", "addonGroups" to "Add-ons").forEach { (key, title) -> FilterChip(selected = tab == key, onClick = { tab = key }, label = { Text(title) }) }
         }
